@@ -5,24 +5,21 @@
 #define SUBMARINE 4
 #define DESTROYER 5
 
+extern int fire(int r, int c);
+
+static int hit;
+static int seed;
+
+static int pseudo_rand() {
+    seed = seed * 214013 + 2531011;
+    return (seed >> 16) & 0x7fff;
+}
+
 #define SIZE 10
 int remaining_parts[5 + 1];
 bool is_checked[SIZE][SIZE];
 
-extern int fire(int r, int c);
-
-void init(int limit) {
-    remaining_parts[CARRIER] = 5;
-    remaining_parts[BATTLESHIP] = 4;
-    remaining_parts[CRUISER] = 3;
-    remaining_parts[SUBMARINE] = 3;
-    remaining_parts[DESTROYER] = 2;
-    for (auto &row : is_checked) {
-        for (bool &checked : row) {
-            checked = false;
-        }
-    }
-}
+void init(int limit) {}
 
 bool is_outside(int r, int c) {
     return r < 0 || r >= SIZE || c < 0 || c >= SIZE;
@@ -42,6 +39,7 @@ void check(int row, int column, int ship, int is_horizontal, int is_vertical, in
             break;
         }
         --remaining_parts[new_ship];
+        --hit;
         if (ship != new_ship) {
             check(new_row, new_col, new_ship, 0, 1, -1);
             check(new_row, new_col, new_ship, 0, 1, 1);
@@ -52,22 +50,36 @@ void check(int row, int column, int ship, int is_horizontal, int is_vertical, in
 }
 
 void play() {
-    init(0);
-    for (int row = 0; row < SIZE; ++row) {
-        for (int column = 0; column < SIZE; ++column) {
-            if (is_checked[row][column] || (row + column) % 2 == 0) {
-                continue;
-            }
-            int ship = fire(row, column);
-            is_checked[row][column] = true;
-            if (ship == MISS) {
-                continue;
-            }
-            --remaining_parts[ship];
-            check(row, column, ship, 0, 1, -1);
-            check(row, column, ship, 0, 1, 1);
-            check(row, column, ship, 1, 0, -1);
-            check(row, column, ship, 1, 0, 1);
+    remaining_parts[CARRIER] = 5;
+    remaining_parts[BATTLESHIP] = 4;
+    remaining_parts[CRUISER] = 3;
+    remaining_parts[SUBMARINE] = 3;
+    remaining_parts[DESTROYER] = 2;
+    for (int i = CARRIER; i <= DESTROYER; ++i) {
+        hit += remaining_parts[i];
+    }
+    for (auto &row : is_checked) {
+        for (bool &checked : row) {
+            checked = false;
         }
+    }
+
+    while (hit != 0) {
+        int row = pseudo_rand() % SIZE;
+        int column = pseudo_rand() % SIZE;
+        if (is_checked[row][column] || (row + column) % 2 == 0) {
+            continue;
+        }
+        int ship = fire(row, column);
+        is_checked[row][column] = true;
+        if (ship == MISS) {
+            continue;
+        }
+        --remaining_parts[ship];
+        --hit;
+        check(row, column, ship, 0, 1, -1);
+        check(row, column, ship, 0, 1, 1);
+        check(row, column, ship, 1, 0, -1);
+        check(row, column, ship, 1, 0, 1);
     }
 }
