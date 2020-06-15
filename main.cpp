@@ -1,156 +1,114 @@
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+#include <cstdio>
 
-#include <stdio.h>
+#define MAX_KEY 20
+#define MAX_TABLE 200000
 
-extern void init(int limit);
-extern void play();
+typedef struct {
+    char key[MAX_KEY + 1];
+    int data;
+} Hash;
+Hash tb[MAX_TABLE];
 
-static int is_checked[10][10];
+unsigned long hash(const char *str) {
+    unsigned long hash = 5381;
+    int c;
 
-#define MISS		0
-#define CARRIER		1
-#define BATTLESHIP	2
-#define CRUISER		3
-#define SUBMARINE	4
-#define DESTROYER	5
-
-static int hit;
-static const int len[5] = { 5, 4, 3, 3, 2 };
-
-#define MAX_CALLCOUNT	10000
-
-static int callcount;
-static int limit;
-
-int fire(int r, int c)
-{
-    if (r < 0 || r > 9 || c < 0 || c > 9 || callcount >= MAX_CALLCOUNT)
-    {
-        callcount = MAX_CALLCOUNT;
-        return 0;
+    while (c = *str++) {
+        hash = (((hash << 5) + hash) + c) % MAX_TABLE;
     }
 
-    ++callcount;
-
-    int ret = is_checked[r][c];
-
-    if (is_checked[r][c] > 0) --hit;
-    is_checked[r][c] = 0;
-
-    return ret;
+    return hash % MAX_TABLE;
 }
 
-static int seed;
-
-static int pseudo_rand()
-{
-    seed = seed * 214013 + 2531011;
-    return (seed >> 16) & 0x7fff;
-}
-
-static bool check(int r, int c, int d, int l)
-{
-    if (d == 1)
-    {
-        for (int m = 0; m < l; ++m)
-            if (is_checked[r][c + m] > 0)
-                return false;
-        return true;
-    }
-    else
-    {
-        for (int m = 0; m < l; ++m)
-            if (is_checked[r + m][c] > 0)
-                return false;
-        return true;
-    }
-}
-
-static void doarrangment()
-{
-    for (int r = 0; r < 10; ++r)
-        for (int c = 0; c < 10; ++c)
-            is_checked[r][c] = 0;
-
-    for (int k = 0; k < 5; ++k)
-    {
-        while(1)
-        {
-            int r, c, d;
-
-            d = pseudo_rand() % 2;
-            if (d == 1)
-            {
-                r = pseudo_rand() % 10;
-                c = pseudo_rand() % (10 - len[k] + 1);
-                if (check(r, c, d, len[k]))
-                {
-                    for (int l = 0; l < len[k]; ++l)
-                        is_checked[r][c + l] = k + 1;
-                    break;
-                }
-            }
-            else
-            {
-                r = pseudo_rand() % (10 - len[k] + 1);
-                c = pseudo_rand() % 10;
-                if (check(r, c, d, len[k]))
-                {
-                    for (int l = 0; l < len[k]; ++l)
-                        is_checked[r + l][c] = k + 1;
-                    break;
-                }
-            }
+int strcmp(char key[21], const char *key1) {
+    int i = 0;
+    while (key[i]) {
+        if (key[i] != key1[i]) {
+            return key[i] - key1[i];
         }
+        ++i;
     }
+    return key[i] - key1[i];
 }
 
-int main()
-{
-    int TC;
+void strcpy(char key[21], const char *key1) {
+    int i = 0;
+    while (key1[i]) {
+        key[i] = key1[i];
+        ++i;
+    }
+    key[i] = key1[i];
+}
 
-    freopen("sample_input.txt", "r", stdin);
+int find(const char *key) {
+    unsigned long h = hash(key);
+    int cnt = MAX_TABLE;
 
-    setbuf(stdout, NULL);
-    scanf("%d", &TC);
+    while (tb[h].key[0] != 0 && cnt--) {
+        if (strcmp(tb[h].key, key) == 0) {
+            return h;
+        }
+        h = (h + 1) % MAX_TABLE;
+    }
+    return -1;
+}
 
-    int totalscore = 0, totalcallcount = 0;
-    for (int testcase = 1; testcase <= TC; ++testcase)
-    {
-        int score = 100, callcount4tc = 0;
 
-        scanf("%d %d", &seed, &limit);
+int add(const char *key) {
+    unsigned long h = hash(key);
 
-        init(limit);
-
-        for (int game = 0; game < 10; ++game)
-        {
-            doarrangment();
-
-            hit = 0;
-            for (int k = 0; k < 5; ++k)
-                hit += len[k];
-
-            callcount = 0;
-            play();
-
-            if (hit != 0)
-                callcount = MAX_CALLCOUNT;
-
-            if (callcount > limit)
-                score = 0;
-
-            callcount4tc += callcount;
+    while (tb[h].key[0] != 0) {
+        if (strcmp(tb[h].key, key) == 0) {
+            return 0;
         }
 
-        printf("#%d %d %d\n", testcase, score, callcount4tc);
-
-        totalscore += score;
-        totalcallcount += callcount4tc;
+        h = (h + 1) % MAX_TABLE;
     }
+    strcpy(tb[h].key, key);
+    tb[h].data = h;
+    return 1;
+}
 
-    printf("total score = %d, total callcount = %d\n", totalscore / TC, totalcallcount);
+using namespace std;
+char name1[MAX_KEY + 1], name2[MAX_KEY + 1];
+int root[MAX_TABLE], counts[MAX_TABLE];
+
+int find_set(int x) {
+    if (root[x] == x) {
+        return x;
+    } else {
+        return root[x] = find_set(root[x]);
+    }
+}
+
+void union_set(int x, int y) {
+    x = find_set(x);
+    y = find_set(y);
+    if (x != y) {
+        counts[x] = counts[y] = counts[x] + counts[y];
+    }
+    root[y] = x;
+}
+
+int main() {
+    int t;
+    scanf(" %d", &t);
+    for (int i = 1; i <= t; ++i) {
+        for (int j = 0; j < MAX_TABLE; ++j) {
+            root[j] = j;
+            counts[j] = 1;
+        }
+        int f;
+        scanf(" %d", &f);
+        for (int j = 0; j < f; ++j) {
+            scanf(" %s%s", name1, name2);
+            add(name1);
+            add(name2);
+            int x = find(name1);
+            int y = find(name2);
+            union_set(x, y);
+            printf("%d\n", counts[find_set(x)]);
+        }
+    }
     return 0;
 }
