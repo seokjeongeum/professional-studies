@@ -1,114 +1,95 @@
-#include <cstdio>
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 
-#define MAX_KEY 20
-#define MAX_TABLE 200000
+#include <stdio.h>
 
-typedef struct {
-    char key[MAX_KEY + 1];
-    int data;
-} Hash;
-Hash tb[MAX_TABLE];
+#define	MAXL			5
+#define MAXF			10
 
-unsigned long hash(const char *str) {
-    unsigned long hash = 5381;
-    int c;
+extern void init(int N);
+extern void add(int id, int F, int ids[MAXF]);
+extern void del(int id1, int id2);
+extern int  recommend(int id, int list[MAXL]);
 
-    while (c = *str++) {
-        hash = (((hash << 5) + hash) + c) % MAX_TABLE;
-    }
+#define INIT			1
+#define ADD				2
+#define DEL				3
+#define RECOMMEND		4
 
-    return hash % MAX_TABLE;
-}
+static int N, M;
 
-int strcmp(char key[21], const char *key1) {
-    int i = 0;
-    while (key[i]) {
-        if (key[i] != key1[i]) {
-            return key[i] - key1[i];
-        }
-        ++i;
-    }
-    return key[i] - key1[i];
-}
+static bool run()
+{
+    int cmd;
+    int id, F, ids[MAXF];
+    int id1, id2;
+    int len, len_a;
+    int list[MAXL], list_a[MAXL];
 
-void strcpy(char key[21], const char *key1) {
-    int i = 0;
-    while (key1[i]) {
-        key[i] = key1[i];
-        ++i;
-    }
-    key[i] = key1[i];
-}
+    bool okay;
 
-int find(const char *key) {
-    unsigned long h = hash(key);
-    int cnt = MAX_TABLE;
+    okay = false;
 
-    while (tb[h].key[0] != 0 && cnt--) {
-        if (strcmp(tb[h].key, key) == 0) {
-            return h;
-        }
-        h = (h + 1) % MAX_TABLE;
-    }
-    return -1;
-}
+    scanf("%d", &M);
 
+    for (int k = 0; k < M; ++k)
+    {
+        scanf("%d", &cmd);
+        switch(cmd)
+        {
+            case INIT:
+                scanf("%d", &N);
+                init(N);
+                okay = true;
+                break;
+            case ADD:
+                scanf("%d %d", &id, &F);
+                for (int i = 0; i < F; ++i)
+                    scanf("%d", &ids[i]);
+                if (okay)
+                    add(id, F, ids);
+                break;
+            case DEL:
+                scanf("%d %d", &id1, &id2);
+                if (okay)
+                    del(id1, id2);
+                break;
+            case RECOMMEND:
+                scanf("%d %d", &id, &len_a);
+                for (int i = 0; i < len_a; ++i)
+                    scanf("%d", &list_a[i]);
+                if (okay)
+                {
+                    len = recommend(id, list);
+                    if (len != len_a)
+                        okay = false;
 
-int add(const char *key) {
-    unsigned long h = hash(key);
-
-    while (tb[h].key[0] != 0) {
-        if (strcmp(tb[h].key, key) == 0) {
-            return 0;
-        }
-
-        h = (h + 1) % MAX_TABLE;
-    }
-    strcpy(tb[h].key, key);
-    tb[h].data = h;
-    return 1;
-}
-
-using namespace std;
-char name1[MAX_KEY + 1], name2[MAX_KEY + 1];
-int root[MAX_TABLE], counts[MAX_TABLE];
-
-int find_set(int x) {
-    if (root[x] == x) {
-        return x;
-    } else {
-        return root[x] = find_set(root[x]);
-    }
-}
-
-void union_set(int x, int y) {
-    x = find_set(x);
-    y = find_set(y);
-    if (x != y) {
-        counts[x] = counts[y] = counts[x] + counts[y];
-    }
-    root[y] = x;
-}
-
-int main() {
-    int t;
-    scanf(" %d", &t);
-    for (int i = 1; i <= t; ++i) {
-        for (int j = 0; j < MAX_TABLE; ++j) {
-            root[j] = j;
-            counts[j] = 1;
-        }
-        int f;
-        scanf(" %d", &f);
-        for (int j = 0; j < f; ++j) {
-            scanf(" %s%s", name1, name2);
-            add(name1);
-            add(name2);
-            int x = find(name1);
-            int y = find(name2);
-            union_set(x, y);
-            printf("%d\n", counts[find_set(x)]);
+                    for (int i = 0; okay && i < len_a; ++i)
+                        if (list[i] != list_a[i])
+                            okay = false;
+                }
+                break;
         }
     }
+
+    return okay;
+}
+
+int main()
+{
+    int TC, MARK;
+
+    freopen("sample_input.txt", "r", stdin);
+
+    setbuf(stdout, NULL);
+    scanf("%d %d", &TC, &MARK);
+
+    for (int testcase = 1; testcase <= TC; ++testcase)
+    {
+        int score = run() ? MARK : 0;
+        printf("#%d %d\n", testcase, score);
+    }
+
     return 0;
 }
